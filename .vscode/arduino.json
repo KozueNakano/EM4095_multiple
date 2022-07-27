@@ -1,5 +1,5 @@
 {
     "port": "COM5",
     "board": "arduino:avr:uno",
-    "sketch": "testscancodeESP32\\testscancodeESP32.ino"
+    "sketch": "testscancodeESP32\\testscancodeUnoMulti.ino"
 }

@@ -10,15 +10,18 @@
 #define TIMEOUT 1000 // standard timeout for manchester decode at  16mhz
 
 // pin configuration
-int demodOut = 2;
-int shd = 4;
-int mod = 5;
-int rdyClk = 6;
+int dOut = 2;
+int shd = 3;
+int led = 4;
+
+int dOut1 = 5;
+int shd1 = 6;
+int led1 = 7;
 
 byte tagData[5]; // Holds the ID numbers from the tag
 
 // Manchester decode. Supply the function an array to store the tags ID in
-bool decodeTag(unsigned char *buf)
+bool decodeTag(unsigned char *buf, int demodOut)
 {
   unsigned char i = 0;
   unsigned short timeCount;
@@ -213,15 +216,14 @@ void transferToBuffer(byte *tagData, byte *tagDataBuffer)
   }
 }
 
-bool scanForTag(byte *tagData)
+bool scanForTag(byte *tagData, int demodOut)
 {
-  static byte tagDataBuffer[5]; // A Buffer for verifying the tag data. 'static' so that the data is maintained the next time the loop is called
-  static int readCount = 0;     // the number of times a tag has been read. 'static' so that the data is maintained the next time the loop is called
-  boolean verifyRead = false;   // true when a tag's ID matches a previous read, false otherwise
-  boolean tagCheck = false;     // true when a tag has been read, false otherwise
-
-  tagCheck = decodeTag(tagData); // run the decodetag to check for the tag
-  if (tagCheck == true)          // if 'true' is returned from the decodetag function, a tag was succesfully scanned
+  static byte tagDataBuffer[5];            // A Buffer for verifying the tag data. 'static' so that the data is maintained the next time the loop is called
+  static int readCount = 0;                // the number of times a tag has been read. 'static' so that the data is maintained the next time the loop is called
+  boolean verifyRead = false;              // true when a tag's ID matches a previous read, false otherwise
+  boolean tagCheck = false;                // true when a tag has been read, false otherwise
+  tagCheck = decodeTag(tagData, demodOut); // run the decodetag to check for the tag
+  if (tagCheck == true)                    // if 'true' is returned from the decodetag function, a tag was succesfully scanned
   {
 
     readCount++; // increase count since we've seen a tag
@@ -252,14 +254,15 @@ void setup()
 {
 
   // set pin modes on RFID pins
-  pinMode(mod, OUTPUT);
+  pinMode(dOut, INPUT);
   pinMode(shd, OUTPUT);
-  pinMode(demodOut, INPUT);
-  pinMode(rdyClk, INPUT);
+  pinMode(led,OUTPUT);
+  pinMode(dOut1, INPUT);
+  pinMode(shd1, OUTPUT);
+  pinMode(led1,OUTPUT);
   // set shd and MOD low to prepare for reading
-  digitalWrite(shd, LOW);
-  digitalWrite(mod, LOW);
-
+  digitalWrite(shd, HIGH);
+  digitalWrite(shd1, HIGH);
   Serial.begin(115200);
   Serial.println("Welcome. Please swipe your RFID Tag.");
 }
@@ -267,29 +270,57 @@ void setup()
 void loop()
 {
 
+  digitalWrite(shd, LOW);
+  delay(50);
   // scan for a tag - if a tag is sucesfully scanned, return a 'true' and proceed
-  if (scanForTag(tagData) == true)
+  long preMillis = millis();
+  while (preMillis + 450 > millis())
   {
-    Serial.print("RFID Tag ID:"); // print a header to the Serial port.
-    // loop through the byte array
-    for (int n = 0; n < 5; n++)
+    if (scanForTag(tagData, dOut) == true)
     {
-      Serial.print(tagData[n], DEC); // print the byte in Decimal format
-      if (n < 4)                     // only print the comma on the first 4 nunbers
+      digitalWrite(led,HIGH);
+      Serial.print("dOutPinNo.:");
+      Serial.println(dOut);
+      unsigned long tagDataLong = 0;
+      for (int i = 1; i < 5; i++)
       {
-        Serial.print(",");
+        tagDataLong <<= 8;
+        tagDataLong |= tagData[i];
       }
-    }
+      Serial.print("Tag ID longVal:");
+      Serial.println(tagDataLong);
 
-    unsigned long tagDataLong = 0;
-    for (int i = 1; i < 5; i++)
-    {
-      tagDataLong <<= 8;
-      tagDataLong |= tagData[i];
+      Serial.print("\n\r"); // return character for next line
+      digitalWrite(led,LOW);
     }
-    Serial.print("longVal:");
-    Serial.println(tagDataLong);
-
-    Serial.print("\n\r"); // return character for next line
   }
+  digitalWrite(shd, HIGH);
+
+
+  digitalWrite(shd1, LOW);
+  delay(50);
+  // scan for a tag - if a tag is sucesfully scanned, return a 'true' and proceed
+  preMillis = millis();
+  while (preMillis + 450 > millis())
+  {
+    if (scanForTag(tagData, dOut1) == true)
+    {
+      digitalWrite(led1,HIGH);
+      Serial.print("dOutPinNo.:");
+      Serial.println(dOut1);
+      unsigned long tagDataLong = 0;
+      for (int i = 1; i < 5; i++)
+      {
+        tagDataLong <<= 8;
+        tagDataLong |= tagData[i];
+      }
+      Serial.print("Tag ID longVal:");
+      Serial.println(tagDataLong);
+
+      Serial.print("\n\r"); // return character for next line
+      digitalWrite(led1,LOW);
+    }
+  }
+  digitalWrite(shd1, HIGH);
+
 }
